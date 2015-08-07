@@ -1,7 +1,7 @@
 /*!
  * angular-timepicker 1.0.8
  * https://github.com/Geta/angular-timepicker
- * Copyright 2014, Geta AS
+ * Copyright 2015, Geta AS
  * Contributors: Dzulqarnain Nasir <dzul@geta.no>
  * Licensed under: MIT (http://www.opensource.org/licenses/MIT)
  */
@@ -16,6 +16,15 @@
                 }
                 var t = str.match(/(\d+)(h?)/);
                 return t[1] ? t[1] * (t[2] ? 60 : 1) : null;
+            },
+            dateToMinutes: function(date) {
+                var totalMin = 0;
+                if (date.getHours() != 24) {
+                    totalMin = date.getHours() * 60 + date.getMinutes();
+                } else {
+                    totalMin = date.getMinutes();
+                }
+                return totalMin;
             },
             buildOptionList: function(minTime, maxTime, step) {
                 var result = [], i = angular.copy(minTime);
@@ -54,7 +63,7 @@
                     timeFormat: "h:mm a",
                     minTime: $dateParser("0:00", "H:mm"),
                     maxTime: $dateParser("23:59", "H:mm"),
-                    step: 15,
+                    step: 1,
                     isOpen: false,
                     activeIdx: -1,
                     optionList: function() {
@@ -66,22 +75,11 @@
                     }
                 };
                 function getUpdatedDate(date) {
-                    if (!current) {
-                        current = angular.isDate(scope.ngModel) ? scope.ngModel : new Date();
-                    }
-                    current.setHours(date.getHours());
-                    current.setMinutes(date.getMinutes());
-                    current.setSeconds(date.getSeconds());
+                    current = dnTimepickerHelpers.dateToMinutes(date);
                     setCurrentValue(current);
                     return current;
                 }
                 function setCurrentValue(value) {
-                    if (!angular.isDate(value)) {
-                        value = $dateParser(scope.ngModel, scope.timepicker.timeFormat);
-                        if (isNaN(value)) {
-                            $log.warn("Failed to parse model.");
-                        }
-                    }
                     current = value;
                 }
                 attrs.$observe("dnTimepicker", function(value) {
@@ -107,11 +105,19 @@
                     updateList = true;
                 });
                 scope.$watch("ngModel", function(value) {
+                    if (!value) {
+                        scope.ngModel = current;
+                    }
                     setCurrentValue(value);
                     ctrl.$render();
                 });
                 ctrl.$render = function() {
-                    element.val(angular.isDate(current) ? dateFilter(current, scope.timepicker.timeFormat) : ctrl.$viewValue ? ctrl.$viewValue : "");
+                    current = current ? current : 0;
+                    var hours = parseInt(current / 60);
+                    hours = hours < 10 ? "0" + hours : hours;
+                    var minutes = current % 60;
+                    minutes = minutes < 10 ? "0" + minutes : minutes;
+                    element.val(dateFilter($dateParser(hours + ":" + minutes, "H:mm"), scope.timepicker.timeFormat));
                 };
                 ctrl.$parsers.unshift(function(viewValue) {
                     var date = angular.isDate(viewValue) ? viewValue : $dateParser(viewValue, scope.timepicker.timeFormat);
@@ -145,7 +151,13 @@
                     scope.position = $position.position(element);
                     scope.position.top = scope.position.top + element.prop("offsetHeight");
                     scope.timepicker.isOpen = true;
-                    scope.timepicker.activeIdx = dnTimepickerHelpers.getClosestIndex(scope.ngModel, scope.timepicker.optionList());
+                    var value = scope.ngModel;
+                    var hours = parseInt(value / 60);
+                    hours = hours < 10 ? "0" + hours : hours;
+                    var minutes = value % 60;
+                    minutes = minutes < 10 ? "0" + minutes : minutes;
+                    value = $dateParser(hours + ":" + minutes, "H:mm");
+                    scope.timepicker.activeIdx = dnTimepickerHelpers.getClosestIndex(value, scope.timepicker.optionList());
                     scope.$digest();
                     scope.scrollToSelected();
                 };

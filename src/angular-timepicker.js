@@ -15,6 +15,18 @@
                     return t[1] ? t[1] * (t[2] ? 60 : 1) : null;
                 },
 
+                dateToMinutes: function (date) {
+                    var totalMin = 0;
+
+                    if (date.getHours() != 24) {
+                        totalMin = (date.getHours() * 60) + date.getMinutes();
+                    } else {
+                        totalMin = date.getMinutes();
+                    }
+
+                    return totalMin;
+                },
+
                 buildOptionList: function (minTime, maxTime, step) {
                     var result = [],
                         i = angular.copy(minTime);
@@ -69,7 +81,7 @@
                             timeFormat: 'h:mm a',
                             minTime: $dateParser('0:00', 'H:mm'),
                             maxTime: $dateParser('23:59', 'H:mm'),
-                            step: 15,
+                            step: 1,
                             isOpen: false,
                             activeIdx: -1,
                             optionList: function () {
@@ -80,29 +92,31 @@
                                 return list;
                             }
                         };
-                        
-                        function getUpdatedDate(date) {
-                            if (!current) {
-                                current = angular.isDate(scope.ngModel) ? scope.ngModel : new Date();
-                            }
 
-                            current.setHours(date.getHours());
-                            current.setMinutes(date.getMinutes());
-                            current.setSeconds(date.getSeconds());
-                            
+                        function getUpdatedDate(date) {
+                            current = dnTimepickerHelpers.dateToMinutes(date);
+
+                            // if (!current) {
+                            //     current = angular.isDate(scope.ngModel) ? scope.ngModel : new Date();
+                            // }
+                            //
+                            // current.setHours(date.getHours());
+                            // current.setMinutes(date.getMinutes());
+                            // current.setSeconds(date.getSeconds());
+
                             setCurrentValue(current);
-                            
+
                             return current;
                         }
-                        
+
                         function setCurrentValue(value) {
-                            if (!angular.isDate(value)) {
-                                value = $dateParser(scope.ngModel, scope.timepicker.timeFormat);
-                                if (isNaN(value)) {
-                                    $log.warn('Failed to parse model.');
-                                }
-                            }
-                            
+                            // if (!angular.isDate(value)) {
+                            //     value = $dateParser(scope.ngModel, scope.timepicker.timeFormat);
+                            //     if (isNaN(value)) {
+                            //         $log.warn('Failed to parse model.');
+                            //     }
+                            // }
+
                             current = value;
                         }
 
@@ -140,6 +154,9 @@
                         });
 
                         scope.$watch('ngModel', function (value) {
+                            if (!value) {
+                              scope.ngModel = current;
+                            }
                             setCurrentValue(value);
                             ctrl.$render();
                         });
@@ -147,7 +164,14 @@
                         // Set up renderer and parser
 
                         ctrl.$render = function () {
-                            element.val(angular.isDate(current) ? dateFilter(current, scope.timepicker.timeFormat) : (ctrl.$viewValue ? ctrl.$viewValue : ''));
+                            //element.val(angular.isDate(current) ? dateFilter(current, scope.timepicker.timeFormat) : (ctrl.$viewValue ? ctrl.$viewValue : ''));
+                            current = current ? current : 0;
+                            var hours = parseInt(current / 60);
+                            hours = (hours < 10) ? ('0' + hours) : hours;
+                            var minutes = current % 60;
+                            minutes = (minutes < 10) ? ('0' + minutes) : minutes;
+
+                            element.val(dateFilter($dateParser(hours + ':' + minutes, 'H:mm'), scope.timepicker.timeFormat));
                         };
 
                         // Parses manually entered time
@@ -204,7 +228,14 @@
                             scope.timepicker.isOpen = true;
 
                             // Set active item
-                            scope.timepicker.activeIdx = dnTimepickerHelpers.getClosestIndex(scope.ngModel, scope.timepicker.optionList());
+                            var value = scope.ngModel;
+                            var hours = parseInt(value / 60);
+                            hours = (hours < 10) ? ('0' + hours) : hours;
+                            var minutes = value % 60;
+                            minutes = (minutes < 10) ? ('0' + minutes) : minutes;
+                            value = $dateParser(hours + ':' + minutes, 'H:mm');
+
+                            scope.timepicker.activeIdx = dnTimepickerHelpers.getClosestIndex(value, scope.timepicker.optionList());
 
                             // Trigger digest
                             scope.$digest();

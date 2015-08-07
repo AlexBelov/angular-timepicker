@@ -57,5 +57,5 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
 
   grunt.registerTask('default', ['karma:single']);
-  grunt.registerTask('build', [ 'karma:single', 'clean', 'uglify']);
+  grunt.registerTask('build', [ 'clean', 'uglify']);
 };
